@@ -19,7 +19,7 @@ model.compile(optimizer='adam',
 (trd, ted) = dso.ToTensorflowObject()
 
 # 定义损失函数和优化器
-loss_fn = tf.keras.losses.SparseCategoricalCrossentropy()
+loss_fn = Loss.Exp()
 optimizer = tf.keras.optimizers.Adam()
 
 # 创建字典来记录训练过程中的指标
@@ -39,9 +39,11 @@ def train_step(images, labels):
     gradients = tape.gradient(loss, model.trainable_variables)
     optimizer.apply_gradients(zip(gradients, model.trainable_variables))
     
-     # 计算准确率 - 将 labels 转换为 int64
-    labels = tf.cast(labels, tf.int64)
-    correct_predictions = tf.equal(tf.argmax(predictions, axis=1), labels)
+    # 正确计算准确率：labels 是 one-hot，所以也要用 argmax
+    correct_predictions = tf.equal(
+        tf.argmax(predictions, axis=1), 
+        tf.argmax(labels, axis=1)  # 注意：labels 是 one-hot，需要 argmax
+    )
     accuracy = tf.reduce_mean(tf.cast(correct_predictions, tf.float32))
     
     return loss, accuracy
@@ -51,13 +53,18 @@ def train_step(images, labels):
 def val_step(images, labels):
     predictions = model(images)
     loss = loss_fn(labels, predictions)
-    correct_predictions = tf.equal(tf.argmax(predictions, axis=1), labels)
+    
+    # 同样，labels 是 one-hot
+    correct_predictions = tf.equal(
+        tf.argmax(predictions, axis=1), 
+        tf.argmax(labels, axis=1)
+    )
     accuracy = tf.reduce_mean(tf.cast(correct_predictions, tf.float32))
     return loss, accuracy
 
 # 训练循环
-for epoch in range(10):
-    print(f'Epoch {epoch + 1}/10')
+for epoch in range(20):
+    print(f'Epoch {epoch + 1}/20')
     
     # 训练阶段
     epoch_loss = []

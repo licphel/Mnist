@@ -26,14 +26,16 @@ def Load() -> DataSourceObject:
     (x, y), (xTest, yTest) = keras.datasets.mnist.load_data()
 
     # choose the top 1/10 data (I want to train faster)
-    x = x[:6000]
-    y = y[:6000]
+    x = x[:600]
+    y = y[:600]
+    xTest = xTest[:1000]
+    yTest = yTest[:1000]
 
     # Preprocess the dataset.
-    x = x.reshape(6000, 28, 28, 1).astype("float32") / 255.0
-    xTest = xTest.reshape(10000, 28, 28, 1).astype("float32") / 255.0
-    # do not convert to tensor since we switch to SparseCategoricalCrossentropy
-    # y = keras.utils.to_categorical(y, 10)
-    # yTest = keras.utils.to_categorical(yTest, 10)
+    x = x.reshape(600, 28, 28, 1).astype("float32") / 255.0
+    xTest = xTest.reshape(1000, 28, 28, 1).astype("float32") / 255.0
+    
+    y = keras.utils.to_categorical(y, 10)
+    yTest = keras.utils.to_categorical(yTest, 10)
 
     return DataSourceObject(x, y, xTest, yTest)
