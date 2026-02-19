@@ -1,30 +1,119 @@
 import DataSource
+import Model
+import Loss
+
 import numpy as np
 from tensorflow import keras
+import tensorflow as tf
 from keras import layers
+import matplotlib.pyplot as plt
 
 dso: DataSource.DataSourceObject = DataSource.Load()
+model = Model.CreateSequential()
+model.summary()
 
-model = keras.Sequential([
-    layers.Dense(512, activation="relu"),
-    layers.Dense(10, activation="softmax")
-])
+model.compile(optimizer='adam',
+              loss='categorical_crossentropy',
+              metrics=['accuracy'])
 
+(trd, ted) = dso.ToTensorflowObject()
 
-model.compile(
-    optimizer="rmsprop",
-    loss="categorical_crossentropy",
-    metrics=["accuracy"]
-)
+# 定义损失函数和优化器
+loss_fn = tf.keras.losses.SparseCategoricalCrossentropy()
+optimizer = tf.keras.optimizers.Adam()
 
+# 创建字典来记录训练过程中的指标
+history = {
+    'loss': [],           # 训练损失
+    'accuracy': [],       # 训练准确率
+    'val_loss': [],       # 验证损失
+    'val_accuracy': []    # 验证准确率
+}
 
-history = model.fit(
-    dso.x, dso.y,
-    batch_size=128,
-    epochs=10,
-    validation_split=0.2
-)
+# 自定义训练步骤
+@tf.function
+def train_step(images, labels):
+    with tf.GradientTape() as tape:
+        predictions = model(images)
+        loss = loss_fn(labels, predictions)
+    gradients = tape.gradient(loss, model.trainable_variables)
+    optimizer.apply_gradients(zip(gradients, model.trainable_variables))
+    
+     # 计算准确率 - 将 labels 转换为 int64
+    labels = tf.cast(labels, tf.int64)
+    correct_predictions = tf.equal(tf.argmax(predictions, axis=1), labels)
+    accuracy = tf.reduce_mean(tf.cast(correct_predictions, tf.float32))
+    
+    return loss, accuracy
 
+# 验证步骤（不需要梯度）
+@tf.function
+def val_step(images, labels):
+    predictions = model(images)
+    loss = loss_fn(labels, predictions)
+    correct_predictions = tf.equal(tf.argmax(predictions, axis=1), labels)
+    accuracy = tf.reduce_mean(tf.cast(correct_predictions, tf.float32))
+    return loss, accuracy
 
-test_loss, test_acc = model.evaluate(dso.xTest, dso.yTest)
-print(f"Test Accuracy: {test_acc:.4f}")
+# 训练循环
+for epoch in range(10):
+    print(f'Epoch {epoch + 1}/10')
+    
+    # 训练阶段
+    epoch_loss = []
+    epoch_acc = []
+    for images, labels in trd:
+        loss, acc = train_step(images, labels)
+        epoch_loss.append(loss.numpy())
+        epoch_acc.append(acc.numpy())
+    
+    # 计算本epoch的平均训练指标
+    avg_train_loss = np.mean(epoch_loss)
+    avg_train_acc = np.mean(epoch_acc)
+    
+    # 验证阶段
+    val_losses = []
+    val_accs = []
+    for images, labels in ted:
+        loss, acc = val_step(images, tf.cast(labels, tf.int64))
+        val_losses.append(loss.numpy())
+        val_accs.append(acc.numpy())
+    
+    # 计算本epoch的平均验证指标
+    avg_val_loss = np.mean(val_losses)
+    avg_val_acc = np.mean(val_accs)
+    
+    # 记录到history字典
+    history['loss'].append(avg_train_loss)
+    history['accuracy'].append(avg_train_acc)
+    history['val_loss'].append(avg_val_loss)
+    history['val_accuracy'].append(avg_val_acc)
+    
+    # 打印进度
+    print(f'训练 - 损失: {avg_train_loss:.4f}, 准确率: {avg_train_acc:.4f}')
+    print(f'验证 - 损失: {avg_val_loss:.4f}, 准确率: {avg_val_acc:.4f}')
+    print('---')
+
+# 现在你可以像使用 model.fit() 返回的 history 一样使用它
+plt.figure(figsize=(12, 4))
+
+# 绘制准确率
+plt.subplot(1, 2, 1)
+plt.plot(history['accuracy'], label='Training Accuracy')
+plt.plot(history['val_accuracy'], label='Validation Accuracy')
+plt.xlabel('Epoch')
+plt.ylabel('Accuracy')
+plt.legend()
+plt.title('Accuracy over Epochs')
+
+# 绘制损失
+plt.subplot(1, 2, 2)
+plt.plot(history['loss'], label='Training Loss')
+plt.plot(history['val_loss'], label='Validation Loss')
+plt.xlabel('Epoch')
+plt.ylabel('Loss')
+plt.legend()
+plt.title('Loss over Epochs')
+
+plt.tight_layout()
+plt.show()
