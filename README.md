@@ -2,7 +2,7 @@
 
 **A minimal MNIST classifier with manual training loop implementation using TensorFlow.** 
 
-Built to understand the fundamentals of deep learning training pipelines. (The Mnist dataset is partially taken for faster training, which is the cause of relatively low accurary.)
+Built to understand the fundamentals of deep learning training pipelines. (The Mnist dataset is partially taken for faster training, which is the cause of relatively low accuracy.)
 
 ## Features
 
