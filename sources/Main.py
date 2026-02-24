@@ -12,4 +12,4 @@ model.summary()
 loss_fn = Loss.CategoricalCrossentropy()
 optimizer = tf.keras.optimizers.Adam()
 
-Trainer.TrainAsync(model, dso, loss_fn, optimizer).Visualize()
+Trainer.TrainAsync(model, dso, loss_fn, optimizer).Visualize() 
