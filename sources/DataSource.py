@@ -11,7 +11,7 @@ class DataSourceObject:
         self.xTest = xTest
         self.yTest = yTest
 
-    def ToTensorflowObject(self) -> List[tf.data.Dataset]:
+    def Packed(self) -> List[tf.data.Dataset]:
         trainer = tf.data.Dataset.from_tensor_slices((self.x, self.y))
         tester = tf.data.Dataset.from_tensor_slices((self.xTest, self.yTest))
 
